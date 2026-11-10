@@ -1,167 +1,165 @@
-# Spec: own-half bases, a reveal, and scars
+# Spec v0.7: your base is your strategy
 
-This is the design the simulator implements as v0.6 (`docs/RULES.md` has the exact numbers). Values marked
-**[design]** are defaults: change one only with a written reason, as with a threshold.
+This is the **target design for v0.7**. The simulator still runs v0.6 (`docs/RULES.md` has the exact rules the
+code runs); `docs/PLAN.md` lists the steps that take it from v0.6 to this spec, one change per run. Values
+marked **[design]** are defaults: change one only with a written reason, as with a threshold.
+
+## The thesis
+
+Skill shows in two places: **how you design your base** and **which units you buy**. You never aim your
+army. Where the fight happens, and who wins it, follows from what you built and how you shaped your ground.
+
+Every mechanic must serve one of those two skills or be cut. When a question is open and the simulator has no
+answer yet, the default is what Mechabellum does, unless it would move skill away from the base (free unit
+placement) or add a system to learn (tech trees, levelling, active abilities).
 
 ## Pillars
 
 1. **You own your base.** You shape and build on your own half, and the opponent cannot edit it.
-2. **You attack with information.** You see both bases before you choose where to attack.
-3. **Fighting changes the ground.** You cannot target terrain on the other side. The clash scars both bases,
-   and you build the next round around the scars.
-4. **You can name the decision that won.** After a clash, you can say in one sentence which decision won or
+2. **Your base aims your army.** Routes come from the ground. Shaping your half decides where the fight
+   happens; nobody picks a lane.
+3. **You answer what you saw.** You see the opponent's base and standing army at every reveal, and you answer
+   with units and with your base next round.
+4. **Fighting changes the ground.** The clash scars both bases, and you build the next round around the scars.
+5. **You can name the decision that won.** After a clash, you can say in one sentence which decision won or
    lost the round.
 
 The mirror gives a fair start: the map begins point-symmetric, and the two halves diverge from round 1.
 
 ## The round
 
-Up to 12 rounds, 20 core HP, simultaneous decisions, automatic clash.
+20 core HP, simultaneous decisions, automatic clash. The game ends when a core reaches 0; round 12 is a
+backstop that should almost never be reached.
 
-| # | Phase | Hidden or public | The player's question |
-| --- | --- | --- | --- |
-| 1 | Draft | public | Who am I becoming? |
-| 2 | Build and shape | hidden, simultaneous | What base do I want standing when they see it? |
-| 3 | Reveal | public | Did they prepare for me? |
-| 4 | Attack plan | hidden, simultaneous | Where do I hit? |
-| 5 | Clash | public, automatic | Was I right? |
-| 6 | Resolve and scars | public | What did the fight leave behind? |
+| # | Phase | Hidden or public | The player's question | Decides |
+| --- | --- | --- | --- | --- |
+| 1 | Draft | own offer | What do I want more of? | one card |
+| 2 | Build and shape | hidden, simultaneous | What base and army do I want standing when they see it? | units, buildings, ops |
+| 3 | Reveal | public | Did they prepare for me? | nothing |
+| 4 | Clash | public, automatic | Was I right? | nothing |
+| 5 | Resolve and scars | public | What did the fight leave behind? | nothing |
+
+There is no attack-plan phase and no crossing.
 
 ### 1. Draft
-The game offers three cards, and a contested card goes to one player only, so the two kits differ. Each
-player submits a ranked order of the three. If the first choices collide, the trailing player gets the card
-and the other gets their second choice; if core HP is level, both get their second choice. Players with
-different kits shape different ground, so two bases on the same starting map diverge.
+Each player gets **their own offer of three cards and picks one**. No ranking and no contested cards.
+**[design]** Alternative if the deal's share of the outcome rises past its bar (C4): one shared offer, and both
+players may take the same card.
 
 ### 2. Build and shape
-- Spend ore on buildings and units (own build zone, 8 buildings, 20 units).
-- Spend **2 TP** on ops that change **one tile on your own half**. Earthshaper adds 2 TP.
-- Your base persists across rounds. Ten ops over a match is too few to build a maze.
-- Scars from earlier rounds are ordinary terrain: build around them, or spend an op to repair them.
+- **Every unit and every building can be bought from round 1.** Cards no longer unlock kinds.
+- Spend ore on buildings (own build zone, max 8) and units (max 20 in the army).
+- Spend **2 TP** on ops that change terrain on your own half.
+- **Income grows.** **[design]** 6 ore, +2 per completed round, +3 per extractor.
+- Your base persists across rounds, and scars from earlier rounds are ordinary terrain.
 - The game keeps a ground path between the cores: it reverts an op that would cut the last path.
-- No shared objective tile. **[design]** A midfield objective (a tile that pays whoever last stood on it) can
-  come later, outside both bases.
 
 ### 3. Reveal
-Both players see both bases: terrain and buildings. Army composition stays hidden until the clash, so you
-still have something to read. You make no decision here; you look at their base and wait.
+Both players see both bases (terrain and buildings) and both routes. Units bought this round stay hidden until
+the clash; the army that stood last round is known.
 
-### 4. Attack plan
-One choice: the **crossing**, the column (0-8) where your army crosses the midline. From there units take
-the shortest path to the enemy core. Armies that cross near each other meet in the field; armies that don't
-race each other's bases.
+### 4. Clash
+- **Routing.** Units appear around their own core and take the shortest ground path to the enemy core for
+  their movement class; air units fly straight. Ties go through `rel(tile, side)`.
+- **Your army comes back.** Every unit you own fights again next round, whether it died, breached or
+  survived. An army is something you build up, not something you spend.
+- **Targeting.** **[design]** One rule: a unit keeps to its route and fights what is in its range; it stops
+  only for something that blocks the route or is shooting at it. It never leaves the route to chase.
+- Batch resolution, 220 ticks, as now.
 
-You cannot change the opponent's terrain.
+### 5. Resolve and scars
+- **Breach damage** is dealt by enemy units that reach your core, by tier. **[design]** The per-round
+  multiplier stays until step 7 of the plan tests whether a growing army makes it unnecessary.
+- Income, then scars, all applied together. Scar rules are unchanged from v0.6 (crater where the most ground
+  units died on each half, ruin where a building fell).
 
-**[design]** Crossing granularity. Default: 9 columns. Alternatives if the crossing stays a guess (criterion
-C3): 3 gates (left, centre, right); a fixed centre crossing in round 1, when there is no base to read; or
-letting the trailing player choose after seeing the leader's crossing.
+## Units, cards and commanders
 
-### 5. Clash
-An automatic tick simulation. It records where units die and which buildings fall. The viewer points at the
-two crossings, because the clash tests those two predictions.
+- **Units.** Six kinds, each with one job and one counter a player can say in a line (for example: "Rhino
+  soaks turret fire; Archers on high ground kill it"). Costs and stats are tuned to make that true; no new
+  unit kinds.
+- **Cards are bonuses.** **[design]** A unit or building card makes that kind cost 1 ore less. Earthshaper,
+  Hover Treads and Camo keep their effects. The three cards that only pay ore keep doing so until they are
+  redesigned.
+- **Commanders.** A commander is its start card, shown to the player as exactly that, with the one line about
+  what the unit is for.
 
-### 6. Resolve and scars
-Breach damage (rising each round), losses that stick, income. Then the game applies the scars, all at once,
-from what the clash recorded.
+## What the player sees (mt_game, no rule change)
 
-## Scars
+- Both routes drawn on the board at the reveal and while shaping, updating as an op is placed.
+- Turret and flak ranges, with the high-ground bonus.
+- This round's stakes: the breach multiplier, and home turf while it exists.
+- After the clash: where the armies met, what each lost, and which tile became a scar.
 
-The defaults need no new terrain type, and a scar cannot cut the ground path (neither trench nor forest
-blocks ground).
+## Cut from v0.6, and why
 
-| Scar | Trigger | Effect | Why |
-| --- | --- | --- | --- |
-| Crater | On each half, the tile where the most ground units died this clash (at least 2 deaths) | The tile becomes trench: slow for ground, impassable for Rhino | The killing ground gets worse to attack through. Hitting the same spot twice costs more, so the attacker has to vary. |
-| Ruin | A building is destroyed | Its tile becomes rubble (forest stats in the prototype: slow, gives cover) | A lost building changes the base: its rubble can shelter the next attack. |
-
-- The game computes scars from the whole clash and applies them together in the resolve step.
-- Ties between tiles go through `rel(tile, side)`, so mirrored fights leave mirrored scars.
-- No scar on a tile next to a core or under a standing building. A crater does not replace wall or water.
-- You repair a scar with the ordinary Clear op (1 TP), so a repair competes with shaping for a budget of 2.
-
-**[design]** decisions, with defaults:
-
-| Question | Default | Alternative |
-| --- | --- | --- |
-| How many craters per half per clash? | 1 | 2, if scars turn out too rare to matter |
-| Minimum deaths for a crater | 2 | 3, if every skirmish leaves one |
-| Do air unit deaths count? | No: only ground units mark the ground | Yes, as a lighter scar |
-| What is rubble? | Forest stats, drawn differently | Its own terrain type, once the idea is proven |
-| Does a breach leave a scar? | No | A crater on the last tile before the core's ring |
-
-Scars have three jobs:
-
-- **Story.** By round 4 the board is a record of the match. A player can point at a crater and say what
-  happened there.
-- **Negative feedback on repetition.** A crater on the defender's killing ground makes the same crossing
-  worse next round. That pushes lead changes without a catch-up rule.
-- **A reason to revisit your base.** Without scars, a good base in round 2 is a good base in round 5.
+| Cut | Why |
+| --- | --- |
+| The crossing and the attack-plan phase | 47.5% of rounds had no right crossing; in play it was either irrelevant or decided by one column |
+| Ranked, contested draft | It is a decision about the draft, not about the base or the army |
+| Unit and building unlocks behind cards | Unit selection can't be a skill when the offer decides what you may buy |
+| Losses that stick | Losing round 1 decided the game by round 4 in play |
+| **[design]** The rising breach multiplier and the fading home turf | Two numbers the player can't see; cut one at a time if games still end without them |
 
 ## Risks
 
-- **Solitaire.** Each player shapes only their own half, so all the interaction runs through the crossing,
-  the hidden army and the scars. Criteria C3, C6 and C7 test whether that is enough. This is the main risk of
-  choosing scars over a targeted strike on the opponent's base.
-- **Turtling.** Free own-half walls and craters both favour the defender. Criterion C8.
-- **The crossing is still a guess.** Two armies choose crossings at the same time. Criterion C3.
-- **Scars are noise.** If luck decides where units die, scars add randomness that no player chose,
-  against pillar 4. Criterion C6.
-- **Two stories at once.** Each player attacks and defends in the same clash. Bots cannot judge whether
-  that reads on a phone; playtests must.
+- **Solitaire.** With no attack choice, all interaction runs through the reveal, the hidden purchases and the
+  scars. Criterion C7 is the main gate.
+- **Respawning was rejected once.** When rosters respawned under the crossing rules, attacking cost nothing
+  and the pure defender was the broken strategy (`docs/RESEARCH.md`). Automatic routing removes the choice to
+  attack, so it is retested, not assumed.
+- **The deal.** Own-offer drafts may raise the share of the outcome fixed by the deal (17.1% in v0.6).
+- **Sameness.** If the route rarely changes, rounds repeat. The route-change metric below watches for it.
+- **Terrain still doesn't matter.** In v0.6 one op was worth about 0.4 core HP and a played game found 0 of 5
+  ops changed a round. If routing does not fix that, ops get bigger (two or three connected tiles).
 
 ## Criteria
 
-`docs/METRICS.md` defines how each one is measured. Win rates are seat-swapped head-to-heads; check a gate
-at 1,600 games.
+`docs/METRICS.md` defines how each one is measured; it is updated as each step lands. Win rates are
+seat-swapped head-to-heads; check a gate at 1,600 games. Bars marked *proposed* are waiting for approval.
 
 ### Gates: the idea works
 
 | # | Claim | Measured as | Target |
 | --- | --- | --- | --- |
-| C1 | The base is the hook | A bot that searches its own-half ops and building placement vs the same bot that never shapes and places by default | ≥ 60% |
-| C2 | Good shaping beats any shaping | Searched own-half ops vs random own-half ops | ≥ 60% |
-| C3 | The attack is a read | Searched crossing vs random crossing, and the share of rounds whose crossing game has no pure equilibrium | ≥ 60% and ≤ 10% |
-| C4 | Players decide the game | Share of outcome variance fixed by the deal (`mt_sim deals`) | ≤ 15% |
-| C5 | There is depth | Ladder steps won by ≥ 60% | ≥ 4 (needs a fourth rung) |
+| C1 | The base is the hook | Searched ops and placement vs no shaping and default placement | ≥ 60% |
+| C2 | Good shaping beats any shaping | Searched ops vs random ops | ≥ 60% |
+| C3 | *Retired.* | There is no crossing | - |
+| C4 | Players decide the game | Share of outcome variance fixed by the deal | ≤ 15% |
+| C5 | There is depth | Ladder steps won by ≥ 60% | ≥ 4 |
+| C7 | It is not solitaire | A bot that builds against the revealed base and army vs the same bot on a fixed build order | ≥ 55% |
+| C12 | An op matters | Mean change in the round's core-HP difference when one op is removed | ≥ 1.5 core HP *(proposed)* |
+| C13 | Shaping is never empty | Shaping decisions where the strongest bot finds no useful op | ≤ 20% *(proposed)* |
 
 ### Diagnostics: it works for the right reasons
 
 | # | Claim | Measured as | Target |
 | --- | --- | --- | --- |
-| C6 | Scars follow from decisions | A bot that accounts for scars vs the same bot that ignores them | ≥ 55% |
-| C6b | Scars happen, but not everywhere | Scars per game, and the share of rounds that leave at least one | 2-6 per game; 40-80% of rounds |
-| C6c | Scars change play | Share of crossings that repeat last round's column | lower with scars than without |
-| C7 | It is not solitaire | A bot that builds against the opponent's revealed base and kit vs the same bot on a fixed build order | ≥ 55% |
-| C8 | Defending is viable but not dominant | Rush vs a defender; defend-then-strike vs rush | ≤ 65%; 40-60% |
-| C9 | The tension sits on decisions | Per-phase movement of win probability (see below): share carried by build + attack plan, and by the deal | build + attack ≥ 50%; deal ≤ 15% |
+| C6 | Scars follow from decisions | Scar-aware bot vs scar-blind bot | ≥ 55% |
+| C6b | Scars happen, but not everywhere | Scars per game; rounds that leave one | 2-6; 40-80% |
+| C8 | Defending is viable but not dominant | A building-heavy persona vs an army-heavy persona, both ways | 35-65% *(proposed, two-sided)* |
 | C10 | The feel checks hold | Close finish, wire-to-wire, lead changes, comeback | each inside its bar |
-| C11 | A round fits a phone | Decisions per round and legal options per decision | reported; judged in playtests |
+| C11 | A round fits a phone | Decisions per round | ≤ 5 *(proposed)* |
+| C14 | Every unit has a job | Each unit's share of purchases | none above 40% or below 5% *(proposed)* |
+| C15 | Round 1 doesn't decide it | The loser of round 1 still wins | 20-35% *(proposed)* |
+| C16 | Ops move the fight | Share of ops that change a route | reported |
+| C9 | The tension sits on decisions | Per-phase movement of win probability | pending, as before |
 
-C7 is the weakest definition here: "builds against the opponent" depends on how good the adaptive bot is.
-Treat a failure as a prompt to look at replays before concluding anything.
+Pacing bars are restated for an uncapped game *(proposed)*: 90% of games end by round 8, and fewer than 1%
+reach round 12.
 
-**The tension curve (C9).** For each game in self-play, estimate seat A's win probability after the deal and
-after each phase of each round, by rollouts on clones. A phase's share is its mean absolute change in win
-probability. This is the suspense-and-surprise measure from Ely, Frankel and Kamenica (`docs/RESEARCH.md`),
-per phase. The decision phases should carry most of the movement, and the clash should settle it.
+### Stop conditions
 
-### Kill criteria
+Stop and reconsider the direction if, after routing, respawning and one terrain fix are in:
 
-Stop tuning and reconsider the design if, at 1,600 games:
-
-- C1 is below 55%, or
-- the crossing guess share is above 25%, or
-- rush vs the defender is outside 35-65% and stays there after the listed alternatives are tried.
-
-Scars have their own, smaller test: if C6 is under 50% (accounting for scars does not help) and lead changes
-are low, scars are decoration. Keep them only if playtesters want them for the story.
+- C12 is under 1 core HP, or
+- C7 is under 55%, or
+- most rounds are fought on the same route.
 
 ### What only people can judge
 
-For the five human playtests:
-
 - Can a player say in one sentence why they lost a round?
 - Do they say "my base"?
-- Can they point at a scar and say what happened there?
+- Can they say why they placed their last op?
+- Can they say what each unit is for?
 - Does a round fit in 90 seconds?
