@@ -5,7 +5,7 @@
 FUZZ_SECS ?= 60
 FILE ?=
 GAMES ?= 400
-OUT   ?= results/v05
+OUT   ?= results/v06
 PROFILE_GAMES   ?= 40
 PROFILE_THREADS ?= 1
 SIM   := ./target/release/mt_sim

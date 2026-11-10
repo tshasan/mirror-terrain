@@ -11,7 +11,7 @@ use probes::{Instr, Probe};
 use std::time::Instant;
 
 /// The rules version every output is labelled with. Bump it with any rules change that moves the golden hashes.
-pub const VERSION: &str = "0.5";
+pub const VERSION: &str = "0.6";
 
 const OPS: [&str; 7] = ["raise", "lower", "wall", "flood", "grow", "clear", "expose"];
 
@@ -264,6 +264,10 @@ struct Pooled {
     seat_a: f64,
     median_rounds: f64,
     reach_r5: f64,
+    /// Share of games that ran to the round cap (`MAX_ROUNDS`).
+    reach_cap: f64,
+    /// Games ended in round r (index r, 1..=MAX_ROUNDS), as shares.
+    rounds_hist: Vec<f64>,
     median_first_dmg: f64,
     comeback: f64,
     comeback_n: usize,
@@ -341,6 +345,8 @@ fn pooled(rs: &[GameResult]) -> Pooled {
         seat_a: share(&|r| r.winner == 0),
         median_rounds: median(rs.iter().map(|r| r.rounds as f64).collect()),
         reach_r5: share(&|r| r.rounds >= 5),
+        reach_cap: share(&|r| r.rounds >= MAX_ROUNDS),
+        rounds_hist: (0..=MAX_ROUNDS).map(|k| share(&|r| r.rounds == k)).collect(),
         median_first_dmg: median(rs.iter().map(|r| r.first_dmg.map_or(6.0, |x| x as f64)).collect()),
         comeback: if cb_n > 0 { cb_w as f64 / cb_n as f64 } else { f64::NAN },
         comeback_n: cb_n,
@@ -678,8 +684,21 @@ fn main() {
         "selfplay" => {
             let (games, seed, bot) = (num(2, 400) as usize, num(3, 1), arg(4, "search"));
             let t = Instant::now();
-            let sp = pooled(&head_to_head(&bot, &bot, games, seed, thread_count(), Instr::Cheap));
+            // A fifth argument "full" turns the probes on and adds the crossing-guess share (slower, never changes a game).
+            let full = arg(5, "") == "full";
+            let sp = pooled(&head_to_head(
+                &bot,
+                &bot,
+                games,
+                seed,
+                thread_count(),
+                if full { Instr::Full } else { Instr::Cheap },
+            ));
             let mut j = scorecard::selfplay_json(&sp);
+            if full {
+                j["guess_share"] = (sp.probe.guess_rounds as f64 / sp.probe.rounds.max(1) as f64).into();
+                j["big_guess_share"] = (sp.probe.big_guess_rounds as f64 / sp.probe.rounds.max(1) as f64).into();
+            }
             j["version"] = VERSION.into();
             j["bot"] = bot.into();
             j["seed"] = seed.into();
@@ -733,9 +752,9 @@ fn main() {
                  \x20 quick [games=400]                            the same scorecard as one JSON line, no files\n\
                  \x20 replay <botA> <botB> [seed=1] [out.json]     record one game for the viewer\n\
                  \x20 verify [seed=1]                              same seed twice -> same hash; probes on vs off -> same game (exit 1 if not)\n\
-                 \x20 symcheck [bot=search] [seeds=20]             same bot+seed in both seats must mirror (exit 1 before round 5)\n\
+                 \x20 symcheck [bot=search] [seeds=20]             same bot+seed in both seats must mirror (exit 1 before the round cap)\n\
                  \x20 commanders [games=400] [seed=1]              commander win-rate matrix + card pick stats (Markdown)\n\
-                 \x20 selfplay [games=400] [seed=1] [bot=search]   pooled self-play metrics as JSON\n\
+                 \x20 selfplay [games=400] [seed=1] [bot=search] [full]   pooled self-play metrics as JSON (full adds crossing-guess share)\n\
                  \x20 deals [deals=200] [replays=10] [seed=1]      share of outcome variance fixed by the deal (search vs search, C4)\n\n\
                  bots: {}",
                 BOT_NAMES.join(" ")

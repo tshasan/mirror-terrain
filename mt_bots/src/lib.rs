@@ -1139,5 +1139,5 @@ mod tests {
         }
     }
 
-    const GOLDEN: [u64; 3] = [0xfa2030c373abebcc, 0x2c142df152bf3281, 0xbe1bcb6d166d1708];
+    const GOLDEN: [u64; 3] = [0xa009d6cfc597ad79, 0x3aae85da8f59e429, 0xf54e934c593cc609];
 }

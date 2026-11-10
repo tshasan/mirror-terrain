@@ -1,4 +1,4 @@
-# Mirror Terrain rules (v0.5, as simulated)
+# Mirror Terrain rules (v0.6, as simulated)
 
 This is what the code does, written for a designer. If this file and the code disagree, the code is right and
 this file needs fixing. Numbers live in `mt_core/src/defs.rs` and the top of `mt_core/src/game.rs`. There are
@@ -6,7 +6,7 @@ no rule flags: the simulator runs exactly one rule set.
 
 ## The board
 
-- 9 columns x 16 rows, portrait. Player A's core is at (4,1) and player B's at (4,14).
+- 9 columns x 16 rows, portrait. Each core sits in the bottom corner of its own half, one tile in from the edge: player A's at (1,1) (bottom-left on screen) and player B's at (7,14), its point reflection.
 - The map **starts point-symmetric**: tile `i` and tile `143 - i` match. Generation builds A's half and mirrors
   it. A map is rejected if a single tile can cut the ground path, if a core has fewer than 2 ore tiles within
   5 tiles, or if high ground sits within 3 tiles of a core.
@@ -17,7 +17,7 @@ The two halves diverge from round 1: shaping is per player, and scars land where
 
 ## A match
 
-Up to **5 rounds**. Each player starts with 20 core HP, 15 ore and the Grunt. Players decide simultaneously
+Up to **12 rounds**. Each player starts with 20 core HP, 15 ore and the Grunt. Players decide simultaneously
 in every phase.
 
 | # | Phase | Hidden or public | What happens |
@@ -29,7 +29,7 @@ in every phase.
 | 5 | Clash | public | Up to 220 ticks of automatic battle. |
 | 6 | Resolve and scars | public | Breach damage, income, then the scars the fight left. |
 
-The game ends when a core reaches 0 HP or after round 5. The winner has more core HP; ties go to the higher
+The game ends when a core reaches 0 HP or after round 12. The winner has more core HP; ties go to the higher
 army value, then to a coin flip from the seed.
 
 ### Draft
@@ -43,7 +43,7 @@ A card you already own pays 2 ore instead.
 
 ### Shape and build
 
-- **2 TP** per round (each Earthshaper adds 1). An op changes **one tile on your own half**. Every op is
+- **2 TP** per round (each Earthshaper adds 2). An op changes **one tile on your own half**. Every op is
   available from round 1.
 - A tile within one tile of either core, or with a building on it, can't be shaped.
 - **Path safety:** if the round's ops together cut every ground path between the cores, every blocking op
@@ -111,10 +111,10 @@ and nothing after.
 | Unit | HP | Dmg | Range | Air | Hits air | Tier | Cost |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Grunt | 12 | 3 | 1 | | | 1 | 3 |
-| Rhino | 40 | 4 | 1 | | | 2 | 7 |
+| Rhino | 40 | 4 | 1 | | | 2 | 8 |
 | Archer | 8 | 3 | 3 | | yes | 1 | 4 |
 | Ranger | 10 | 3 | 2 | | yes | 1 | 4 |
-| Drone | 7 | 2 | 1 | yes | yes | 1 | 4 |
+| Drone | 7 | 2 | 1 | yes | yes | 1 | 6 |
 | Gunship | 22 | 4 | 2 | yes | yes | 2 | 8 |
 
 | Building | HP | Dmg | Range | Hits | Cost |
@@ -129,7 +129,7 @@ and nothing after.
 | Drone (two copies in the pool), Gunship | air | unlocks the unit |
 | Turret, Flak | defense | unlocks the building |
 | Extractor | economy | unlocks the building |
-| Earthshaper | terrain | +1 TP every round |
+| Earthshaper | terrain | +2 TP every round |
 | Hover Treads | ground | your ground units cross trench at normal speed, Rhino included |
 | Camo | terrain | your ground units in forest take half damage |
 | Grovekeeper, Sapper | terrain | +2 ore |

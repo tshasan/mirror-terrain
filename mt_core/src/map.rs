@@ -68,7 +68,12 @@ pub fn no_single_tile_cut(t: &[Terrain; N]) -> bool {
 }
 
 pub fn generate(rng: &mut Rng) -> [Terrain; N] {
-    for _ in 0..200 {
+    generate_counted(rng).0
+}
+
+/// `generate`, also returning how many attempts it took (200 means it fell back to an all-plain board).
+pub fn generate_counted(rng: &mut Rng) -> ([Terrain; N], u32) {
+    for attempt in 1..=200 {
         let mut t = [Terrain::Plain; N];
         let place = |rng: &mut Rng, t: &mut [Terrain; N], kind: Terrain, count: usize, rows: (i32, i32), cluster: bool| {
             let mut placed = 0;
@@ -108,10 +113,10 @@ pub fn generate(rng: &mut Rng) -> [Terrain; N] {
         }
         let ore_near = (0..N).filter(|&i| t[i] == Terrain::Ore && cheb(i, CORE[0]) <= 5).count();
         if ground_connected(&t) && no_single_tile_cut(&t) && ore_near >= 2 {
-            return t;
+            return (t, attempt);
         }
     }
-    [Terrain::Plain; N]
+    ([Terrain::Plain; N], 200)
 }
 
 /// Movement class of a unit kind: the only thing `move_cost` reads besides terrain and `hover`. Kinds in the same
@@ -256,4 +261,27 @@ pub fn dist_field_dijkstra(t: &[Terrain; N], target: usize, kind: UnitKind, hove
         }
     }
     dist
+}
+
+#[cfg(test)]
+mod rejection {
+    use super::*;
+    use rand::SeedableRng;
+
+    /// Run with `cargo test --release map_rejection_rate -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn map_rejection_rate() {
+        let (mut tries, mut fallbacks, n) = (0u64, 0u64, 20000u64);
+        for seed in 0..n {
+            let (_, a) = generate_counted(&mut Rng::seed_from_u64(seed));
+            tries += a as u64;
+            fallbacks += u64::from(a == 200);
+        }
+        eprintln!(
+            "map attempts per map {:.3} (rejected share {:.1}%), all-plain fallbacks {fallbacks} of {n}",
+            tries as f64 / n as f64,
+            100.0 * (1.0 - n as f64 / tries as f64)
+        );
+    }
 }

@@ -59,3 +59,22 @@ Worth knowing before proposing them again.
 - Clark et al., "Gambling Near-Misses Enhance Motivation...", *Neuron* 61, 2009. https://pmc.ncbi.nlm.nih.gov/articles/PMC2658737/
 - The Dupuy Institute (force ratios): https://dupuyinstitute.org/
 - Clausewitz, *On War*, Books 6-7. Commentary: https://www.clausewitz.com/
+
+## v0.6 changes
+
+- **Round cap 5 -> 12.** Kept as a backstop. It barely changes game length: 42-47% of games already ended by
+  knockout before round 5 because breach damage is `breach * (round + 1)` and has no ceiling. The old round-5 mass
+  spreads over rounds 5-8; 0.3% of games reach 12. HP-decided games drop from about 23% to about 2%.
+- **Corner cores.** Core at (1,1) / (7,14) instead of the centre column. Same ring, build zone and crossing choice; only
+  the coordinates and the tests that named them changed. Map generation retries 1.44x as often (30.5% of attempts rejected,
+  mostly the ore-within-5-of-the-core rule, which now excludes columns 7-8), never falling back to a flat board in 20000
+  maps. Rush vs the fort fell from about 16% to about 9%: a corner is easier to seal, and the defender's path is shorter.
+  Big crossing guesses fell from 25% to 17% of rounds.
+- **Commander balance by existing numbers only**, one lever per run (see `results/experiments.jsonl`). Kept: Rhino cost 7
+  -> 8 (Ironclad 57.3% -> 50.9% balanced), Earthshaper +1 TP -> +2 TP (Geomancer 46.1 -> 48.1), Drone cost 4 -> 6
+  (Skywing 54.1 -> 50.2). Rejected: Drone HP 6, speed 12 or 16, cooldown 8 and BASE_TP 1. Drone cost 5 did nothing; the
+  effect is a threshold, not a slope.
+  With every commander on the `balanced` bot style, all four sit inside 48-52% on three seed ranges. With each
+  commander's own bot style Skywing stays near 35% and Warden near 58%: the air and turtle personas are the gap, not the
+  start card. Making the air persona stronger is a bot change, not a rule change, and is left open.
+- **Growing income (+1 ore per round)** was tried and rejected: no movement outside the CI on any fast-loop metric.

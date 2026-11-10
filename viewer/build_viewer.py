@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 root = pathlib.Path(__file__).resolve().parent
-results = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else root.parent / "results" / "v05")
+results = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else root.parent / "results" / "v06")
 out = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else root / "index.html")
 
 order = ["search_vs_search", "shaper_vs_search", "air_vs_ground", "rush_vs_fort", "search_vs_greedy"]

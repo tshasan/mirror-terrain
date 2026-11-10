@@ -4,7 +4,10 @@ pub const N: usize = W * H;
 /// Tiles per half. Side A's half is tiles `0..HALF` (rows 0-7); side B's is the rest.
 pub const HALF: usize = N / 2;
 
-pub const CORE: [usize; 2] = [W + 4, N - 1 - (W + 4)];
+/// Each core sits in the bottom corner of its own half, one tile in from the board edge so its 3x3 ring stays on the
+/// board: side A at column 1, row 1 (bottom-left on screen, where mt_game draws side A), side B its point reflection
+/// (column 7, row 14, top-right).
+pub const CORE: [usize; 2] = [W + 1, N - 1 - (W + 1)];
 
 pub fn xy(i: usize) -> (i32, i32) {
     ((i % W) as i32, (i / W) as i32)
@@ -160,10 +163,10 @@ impl UnitKind {
         };
         match self {
             Grunt => s(12, 3, 1, 8, 12, false, false, 1, 3),
-            Rhino => s(40, 4, 1, 10, 9, false, false, 2, 7),
+            Rhino => s(40, 4, 1, 10, 9, false, false, 2, 8),
             Archer => s(8, 3, 3, 10, 10, false, true, 1, 4),
             Ranger => s(10, 3, 2, 9, 12, false, true, 1, 4),
-            Drone => s(7, 2, 1, 6, 14, true, true, 1, 4),
+            Drone => s(7, 2, 1, 6, 14, true, true, 1, 6),
             Gunship => s(22, 4, 2, 10, 9, true, true, 2, 8),
         }
     }

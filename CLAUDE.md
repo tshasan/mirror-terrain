@@ -5,7 +5,7 @@ two players each shape and build a base on their own half of a 9x16 map that sta
 both bases, choose where to attack, and watch an automatic clash that scars the ground. This repo answers
 one question with numbers: *is the loop good yet?*
 
-Read `docs/SPEC.md` for the design, `docs/RULES.md` for the exact rules the code runs (v0.5),
+Read `docs/SPEC.md` for the design, `docs/RULES.md` for the exact rules the code runs (v0.6),
 `docs/METRICS.md` for what "good" means, and `docs/PLAN.md` for what to do next. `docs/RESEARCH.md` explains
 why each rule exists.
 
@@ -56,7 +56,7 @@ commander's start card from the plan the bots play with it. `MT_THREADS=<n>` set
   The results page renders whatever `report.json` contains; labels, bars and verdicts come from the simulator.
 - `fuzz/`: cargo-fuzz targets, a separate workspace. `game_invariants` checks state invariants and determinism
   on arbitrary inputs; `mirrored_draw` checks seat symmetry. A new invariant belongs in one of them too.
-- `results/`: kept runs. `v05/` is the current baseline. Don't hand-edit anything in here.
+- `results/`: kept runs. `v06/` is the current baseline (`v05/` is the previous one). Don't hand-edit anything in here.
 
 ## Invariants (never break these)
 
@@ -84,7 +84,7 @@ There is one rule set, so a rule change is an edit, not a flag.
 
 1. Change it in `mt_core`, with a comment saying what it does and why.
 2. `make check`. The golden hashes will move: paste the new values.
-3. `make suite OUT=results/try GAMES=400` and compare with `results/v05/report.json`, which was run at the
+3. `make suite OUT=results/try GAMES=400` and compare with `results/v06/report.json`, which was run at the
    same game count and seeds.
 4. Kept: update `docs/RULES.md`, add a short entry to `docs/RESEARCH.md`, bump `VERSION`, and re-run the
    baseline in `results/`. Rejected: revert the code. Either way, log the run.
@@ -97,7 +97,7 @@ pick up criteria and checks without further changes. Add it to `docs/METRICS.md`
 
 ## Experiment protocol
 
-- Change **one** thing per run. Compare against `results/v05/report.json` at the same game count.
+- Change **one** thing per run. Compare against `results/v06/report.json` at the same game count.
 - At 400 games the 95% CI on a win rate is about ±4.9 points. Treat differences smaller than that as noise.
   Re-run with another seed range (`match <a> <b> 1600 <seed>`) before believing a borderline result.
 - A change is kept only if the targeted metric moved past its CI and no passing check in the scorecard

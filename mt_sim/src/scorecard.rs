@@ -176,6 +176,8 @@ pub fn selfplay_json(p: &Pooled) -> Value {
         "seat_a": r4(p.seat_a),
         "median_rounds": p.median_rounds,
         "reach_r5": r4(p.reach_r5),
+        "reach_cap": r4(p.reach_cap),
+        "rounds_hist": p.rounds_hist.iter().map(|x| r4(*x)).collect::<Vec<_>>(),
         "median_first_dmg": p.median_first_dmg,
         "hp_decided": r4(p.hp_decided),
         "knockout": r4(1.0 - p.hp_decided),

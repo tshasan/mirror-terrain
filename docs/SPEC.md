@@ -1,6 +1,6 @@
 # Spec: own-half bases, a reveal, and scars
 
-This is the design the simulator implements as v0.5 (`docs/RULES.md` has the exact numbers). Values marked
+This is the design the simulator implements as v0.6 (`docs/RULES.md` has the exact numbers). Values marked
 **[design]** are defaults: change one only with a written reason, as with a threshold.
 
 ## Pillars
@@ -16,7 +16,7 @@ The mirror gives a fair start: the map begins point-symmetric, and the two halve
 
 ## The round
 
-Up to 5 rounds, 20 core HP, simultaneous decisions, automatic clash.
+Up to 12 rounds, 20 core HP, simultaneous decisions, automatic clash.
 
 | # | Phase | Hidden or public | The player's question |
 | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ different kits shape different ground, so two bases on the same starting map div
 
 ### 2. Build and shape
 - Spend ore on buildings and units (own build zone, 8 buildings, 20 units).
-- Spend **2 TP** on ops that change **one tile on your own half**. Earthshaper adds 1 TP.
+- Spend **2 TP** on ops that change **one tile on your own half**. Earthshaper adds 2 TP.
 - Your base persists across rounds. Ten ops over a match is too few to build a maze.
 - Scars from earlier rounds are ordinary terrain: build around them, or spend an op to repair them.
 - The game keeps a ground path between the cores: it reverts an op that would cut the last path.

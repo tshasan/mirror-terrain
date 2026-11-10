@@ -10,7 +10,9 @@ pub const START_ORE: i32 = 15;
 pub const BASE_INCOME: i32 = 6;
 pub const EXTRACTOR_INCOME: i32 = 3;
 pub const BASE_TP: i32 = 2;
-pub const MAX_ROUNDS: u32 = 5;
+/// Round cap, a backstop only: rising breach damage ends almost every game by knockout first. At the cap the higher
+/// core HP wins.
+pub const MAX_ROUNDS: u32 = 12;
 pub const ROSTER_CAP: usize = 20;
 pub const BUILDING_CAP: usize = 8;
 /// The columns an army may cross the midline on, in the chooser's own frame (mapped to the board with `rel`).
@@ -357,7 +359,7 @@ impl Game {
                     p.buildings[b as usize] = true;
                 }
             }
-            Card::Earthshaper => p.tp_bonus += 1,
+            Card::Earthshaper => p.tp_bonus += 2,
             // Every op is available from round 1, so the cards that used to unlock one pay ore instead.
             Card::Grovekeeper | Card::Sapper | Card::Prospector => p.ore += 2,
             Card::HoverTreads => p.hover = true,
@@ -687,7 +689,7 @@ mod tests {
             hp: 10,
         });
         let d = deaths_at(&[
-            (at(4, 2), 8),  // next to core 0 (4,1): not eligible
+            (at(2, 2), 8),  // next to core 0 (1,1): not eligible
             (at(2, 3), 9),  // wall
             (at(6, 3), 9),  // water
             (at(5, 4), 7),  // under a standing building
@@ -695,7 +697,7 @@ mod tests {
             (at(7, 5), 3),  // ties with (1,5); loses on rel
             (at(3, 6), 2),  // fewer deaths
             (at(0, 7), 1),  // under the minimum
-            (at(4, 13), 8), // next to core 1 (4,14)
+            (at(6, 13), 8), // next to core 1 (7,14)
             (at(3, 10), 2), // the only eligible tile on half 1
         ]);
         g.apply_scars(&d, &[]);
@@ -748,11 +750,11 @@ mod tests {
         g.terrain[at(2, 4)] = Terrain::Ore;
         g.terrain[at(5, 5)] = Terrain::High;
         // ruins land on Ore and High alike; a building beside the core leaves nothing
-        g.apply_scars(&[0; N], &[at(2, 4), at(5, 5), at(3, 2), at(6, 10)]);
+        g.apply_scars(&[0; N], &[at(2, 4), at(5, 5), at(2, 2), at(6, 10)]);
         assert_eq!(g.terrain[at(2, 4)], Terrain::Forest);
         assert_eq!(g.terrain[at(5, 5)], Terrain::Forest);
         assert_eq!(g.terrain[at(6, 10)], Terrain::Forest);
-        assert_eq!(g.terrain[at(3, 2)], Terrain::Plain);
+        assert_eq!(g.terrain[at(2, 2)], Terrain::Plain);
         assert_eq!(g.scar_under[&at(2, 4)], Terrain::Ore);
         assert_eq!(g.scar_under[&at(5, 5)], Terrain::High);
         assert!(g.last_scars.iter().all(|s| s.1 == ScarKind::Ruin));

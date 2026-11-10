@@ -5,10 +5,10 @@ single-file HTML replay viewer. It answers *is the loop good yet?* with numbers.
 
 Mirror Terrain is a portrait mobile strategy game for two players on a map that starts point-symmetric. Each
 round you draft a card, shape and build a base on your own half, see both bases, choose where your army
-crosses, and watch an automatic clash that scars the ground. A match lasts up to 5 rounds.
+crosses, and watch an automatic clash that scars the ground. A match lasts up to 12 rounds.
 
-- **The design** is in `docs/SPEC.md`, and **the exact rules the code runs** (v0.5) are in `docs/RULES.md`.
-- **What "good" means** is in `docs/METRICS.md`; the current numbers are in `results/v05/report.md`.
+- **The design** is in `docs/SPEC.md`, and **the exact rules the code runs** (v0.6) are in `docs/RULES.md`.
+- **What "good" means** is in `docs/METRICS.md`; the current numbers are in `results/v06/report.md`.
 - **What to do next** is in `docs/PLAN.md`.
 
 ## Quick start
@@ -34,7 +34,7 @@ make demo                   # play the game yourself against a bot (Bevy window)
 | `mt_game/` | The playable demo: you against a bot, drawn with rectangles and letters (Bevy). |
 | `viewer/` | `template.html` + `build_viewer.py` → `viewer/index.html` (replays and results). |
 | `fuzz/` | cargo-fuzz targets, a separate workspace (nightly only). |
-| `results/` | Kept runs. `v05/` is the baseline; `experiments.jsonl` logs every kept or rejected run. |
+| `results/` | Kept runs. `v06/` is the baseline; `experiments.jsonl` logs every kept or rejected run. |
 | `docs/` | `SPEC.md`, `RULES.md`, `METRICS.md`, `PLAN.md`, `RESEARCH.md`. |
 | `CLAUDE.md` | Invariants, the experiment protocol, and how to change a rule or add a metric. Read it before changing code. |
 

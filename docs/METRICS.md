@@ -2,7 +2,7 @@
 
 `mt_sim suite` (or `make suite`) measures everything in this file and writes `report.md`, `report.json` and
 five replays. `mt_sim quick` prints the same JSON as one line and writes nothing. The current values are in
-`results/v05/report.md`; this file defines the measurements and gives the reason for each bar. Bars are
+`results/v06/report.md`; this file defines the measurements and gives the reason for each bar. Bars are
 design decisions: change one only with a written reason.
 
 Every head-to-head is seat-swapped: each seed is played twice, and the two bots (each keeping its own bot
@@ -148,3 +148,7 @@ slightly under-buys (the default build also plans buildings). C8 is a bar betwee
   ranges with `mt_sim selfplay <games> <seed>`.
 - Bots are proxies. A check passing means the *bots* don't find a problem. Human playtests decide fun,
   readability and whether a round fits in 90 seconds.
+
+- **Commander balance (proposed bar, not in the scorecard).** Every commander 48-52% overall and every pairing 45-55%
+  in `mt_sim commanders 1600`, with `MT_STYLE=balanced` and with each commander's own style. Overall rows have a 95% CI
+  of about +/-1.4 at 1600 games per pair.

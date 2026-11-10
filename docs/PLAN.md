@@ -1,17 +1,17 @@
-# Plan: from v0.5 to a playtest
+# Plan: from v0.6 to a playtest
 
-`docs/SPEC.md` is the design, `docs/RULES.md` is what the simulator runs (v0.5), and `docs/METRICS.md`
+`docs/SPEC.md` is the design, `docs/RULES.md` is what the simulator runs (v0.6), and `docs/METRICS.md`
 defines the scorecard. This file is the only "what next" list in the project.
 
 ## Where things stand
 
 - The simulator runs one rule set: own-half shaping, a reveal before the attack, a crossing column, scars
   and a contested draft. There are no rule flags.
-- The baseline is `results/v05/` (400 games per matchup). Read `report.md` there before choosing a step.
+- The baseline is `results/v06/` (400 games per matchup). Read `report.md` there before choosing a step.
 
 ## Rules for every step
 
-- Change one thing per run. Compare against `results/v05/report.json` at the same game count.
+- Change one thing per run. Compare against `results/v06/report.json` at the same game count.
 - Check a gate at 1,600 games.
 - Log every kept or rejected run in `results/experiments.jsonl`. Never move a target to pass.
 - If a step fails its "done when" after the listed tries, log the rejections and stop for a decision.
