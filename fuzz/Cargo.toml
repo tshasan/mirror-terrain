@@ -1,0 +1,30 @@
+[package]
+name = "mt_fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+mt_core = { path = "../mt_core" }
+
+# Separate workspace so the fuzz crate (and its nightly-only build) stays out of `cargo test`.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "game_invariants"
+path = "fuzz_targets/game_invariants.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "mirrored_draw"
+path = "fuzz_targets/mirrored_draw.rs"
+test = false
+doc = false
+bench = false

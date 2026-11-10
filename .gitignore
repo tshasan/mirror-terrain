@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+.DS_Store
+/scratch/
+mutants.out/
+mutants.out.old/
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+/results/try*

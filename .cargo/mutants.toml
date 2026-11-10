@@ -1,0 +1,15 @@
+# cargo-mutants config. Run with `make mutants`, or `make mutants FILE=mt_core/src/clash.rs` for one file.
+# Results land in mutants.out/; missed.txt lists code changes that no test noticed.
+
+# The rules and the bots. mt_sim is the CLI and metric plumbing; mutate it with
+# `cargo mutants -f mt_sim/src/main.rs` when working on metrics.
+exclude_globs = ["mt_sim/**", "fuzz/**"]
+
+# Display names only feed output, never play.
+exclude_re = ["::name -> ", "::name$"]
+
+# The golden-hash test lives in mt_bots but guards mt_core too, so every mutant runs every crate's tests.
+test_workspace = true
+
+# Dev profile: the suite takes ~6 s, while a release build alone is ~25 s of LTO.
+timeout_multiplier = 3.0

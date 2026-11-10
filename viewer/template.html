@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mirror Terrain Replays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: one portrait column, board first, controls under the thumb, log and results below. */
+  --bg: #eef1f3;
+  --panel: #ffffff;
+  --ink: #17212b;
+  --muted: #5b6875;
+  --line: #d3d9df;
+  --side-a: #0f8a8a;
+  --side-b: #c9661a;
+  --good: #2f8a4a;
+  --bad: #c0392b;
+  --t-plain: #dfe6d6;
+  --t-high: #b9a37a;
+  --t-trench: #8d7d6a;
+  --t-wall: #4a4f57;
+  --t-water: #6aa5d8;
+  --t-forest: #4f8a4c;
+  --t-ore: #d7c25a;
+  --grid: rgba(23,33,43,0.10);
+  --font-display: "Chakra Petch", "IBM Plex Sans", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12171c; --panel: #1b2229; --ink: #e6ecf1; --muted: #93a1ad; --line: #2c3640;
+    --side-a: #37c2c2; --side-b: #f08a3c; --good: #5cc27a; --bad: #ef6b5b;
+    --t-plain: #3a4536; --t-high: #7d6a49; --t-trench: #5a4c3e; --t-wall: #20242a;
+    --t-water: #2f5f8c; --t-forest: #2d5a2b; --t-ore: #8f7d22; --grid: rgba(230,236,241,0.08);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12171c; --panel: #1b2229; --ink: #e6ecf1; --muted: #93a1ad; --line: #2c3640;
+  --side-a: #37c2c2; --side-b: #f08a3c; --good: #5cc27a; --bad: #ef6b5b;
+  --t-plain: #3a4536; --t-high: #7d6a49; --t-trench: #5a4c3e; --t-wall: #20242a;
+  --t-water: #2f5f8c; --t-forest: #2d5a2b; --t-ore: #8f7d22; --grid: rgba(230,236,241,0.08);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; }
+main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 17px; margin: 0 0 8px; }
+.sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.tabs { display: flex; gap: 8px; }
+.tab { font: 500 14px var(--font-body); padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--ink); box-shadow: inset 0 -2px 0 var(--ink); }
+.tab:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--side-a); outline-offset: 2px; }
+.layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.boardwrap { position: relative; }
+canvas { display: block; width: 100%; border-radius: 6px; touch-action: manipulation; }
+.hud { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.side { display: grid; gap: 4px; font-size: 13px; }
+.side .name { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.hpbar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.hpbar > span { display: block; height: 100%; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.controls { display: grid; gap: 10px; margin-top: 10px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button.ctl { font: 500 14px var(--font-body); min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button.ctl.primary { background: var(--ink); color: var(--panel); border-color: var(--ink); min-width: 84px; }
+select { font: 14px var(--font-body); min-height: 40px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); max-width: 100%; }
+input[type=range] { width: 100%; accent-color: var(--ink); }
+.phase { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); }
+.chip.a { border-color: var(--side-a); color: var(--side-a); }
+.chip.b { border-color: var(--side-b); color: var(--side-b); }
+.chip.bad { border-color: var(--bad); color: var(--bad); }
+.chip.good { border-color: var(--good); color: var(--good); }
+.log { font-size: 14px; line-height: 1.5; display: grid; gap: 6px; }
+.legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; font-size: 12px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; border: 1px solid var(--grid); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+.tablewrap { overflow-x: auto; }
+.bar { position: relative; height: 18px; background: var(--bg); border-radius: 4px; min-width: 120px; }
+.bar > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--side-a); }
+.bar > i { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 1px dashed var(--muted); }
+.verdict { font: 600 12px var(--font-body); padding: 2px 8px; border-radius: 999px; white-space: nowrap; color: var(--muted); border: 1px solid var(--muted); }
+.verdict.go { color: var(--good); border: 1px solid var(--good); }
+.verdict.nogo { color: var(--bad); border: 1px solid var(--bad); }
+.note { color: var(--muted); font-size: 13px; max-width: 65ch; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Mirror Terrain Replays</h1>
+    <div class="sub">Recorded games from the headless simulator. The rules engine is deterministic: same seed, same inputs, same match.</div>
+  </header>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-replay" aria-selected="true" aria-controls="view-replay">Replay</button>
+    <button class="tab" role="tab" id="tab-results" aria-selected="false" aria-controls="view-results">Test results</button>
+  </div>
+
+  <section id="view-replay" role="tabpanel" aria-labelledby="tab-replay">
+    <div class="layout">
+      <div class="panel">
+        <div class="hud">
+          <div class="side" id="hud-b"></div>
+          <div class="side" id="hud-a"></div>
+        </div>
+        <div class="boardwrap"><canvas id="board" aria-label="Game board"></canvas></div>
+        <div class="controls">
+          <div class="row">
+            <span class="phase" id="phase">Round 1 · Draft</span>
+            <span class="note" id="rules"></span>
+          </div>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Match timeline">
+          <div class="row">
+            <button class="ctl" id="prev" aria-label="Previous step">◀</button>
+            <button class="ctl primary" id="play">Play</button>
+            <button class="ctl" id="next" aria-label="Next step">▶</button>
+            <button class="ctl" id="speed">1×</button>
+            <button class="ctl" id="nextround">Next round</button>
+          </div>
+          <div class="row">
+            <label for="game" class="note">Game</label>
+            <select id="game"></select>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid; gap:16px">
+        <div class="panel">
+          <h2>What happened</h2>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="panel">
+          <h2>Key</h2>
+          <div class="legend" id="legend"></div>
+          <p class="note">Your side (A, teal) is at the bottom. Each player shapes only their own half; an outline shows a tile that was shaped this round (teal for A, orange for B, dashed grey if the op was reverted because it would have cut the last path). Arrows on the midline mark where each army crosses. Circles are ground units, triangles are air units, squares are buildings. After a clash, a red ring marks a crater (the tile where most ground units died becomes trench) and a brown ring marks a ruin (a destroyed building leaves forest).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-results" role="tabpanel" aria-labelledby="tab-results" hidden>
+    <div style="display:grid; gap:16px">
+      <div class="panel">
+        <h2>Criteria</h2>
+        <p class="note" id="results-note"></p>
+        <div class="tablewrap"><table id="criteria"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Match checks</h2>
+        <p class="note">Search-bot self-play unless the check names another bot. Bars are in docs/METRICS.md.</p>
+        <div class="tablewrap"><table id="checks"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Feel</h2>
+        <p class="note">Criterion C10. A metric fails only when it is outside its bar by more than its own confidence interval.</p>
+        <div class="tablewrap"><table id="feel"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Head-to-head win rates</h2>
+        <p class="note">Win rate of the first bot, seat-swapped. The dashed lines mark 50% and the 60% go bar.</p>
+        <div class="tablewrap"><table id="h2h"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Shaping op mix</h2>
+        <p class="note">Share of terraform points spent per op in search-bot self-play. No single op should take more than half.</p>
+        <div class="tablewrap"><table id="opmix"></table></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/*__DATA__*/
+const W = 9, H = 16, N = W * H;
+const TERR = ['plain', 'high', 'trench', 'wall', 'water', 'forest', 'ore'];
+const UNIT = ['G', 'R', 'A', 'N', 'D', 'S'];
+const UNIT_NAME = ['grunt', 'rhino', 'archer', 'ranger', 'drone', 'gunship'];
+const AIR = [false, false, false, false, true, true];
+const BLD = ['T', 'F', 'E'];
+const BLD_NAME = ['turret', 'flak', 'extractor'];
+const OPS_ORDER = ['raise', 'lower', 'wall', 'flood', 'grow', 'clear', 'expose'];
+const DUR = { draft: 900, terraform: 1800, build: 1200, attack: 1200, clash: 200, resolve: 1400 };
+// What a scar turns its tile into: kind 0 = crater (trench), kind 1 = ruin (forest).
+const SCAR_TERRAIN = [2, 5];
+
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const $ = (id) => document.getElementById(id);
+const canvas = $('board');
+const ctx = canvas.getContext('2d');
+
+let rep = null, steps = [], idx = 0, playing = false, speed = 1, acc = 0, last = 0;
+
+function buildSteps(r) {
+  const out = [];
+  let prevT = r.terrain0, prevB = [], prevCore = [20, 20];
+  r.rounds.forEach((rd, ri) => {
+    out.push({ kind: 'draft', ri, terrain: prevT, blds: prevB, core: prevCore });
+    out.push({ kind: 'terraform', ri, terrain: rd.terrain, before: prevT, blds: prevB, core: prevCore });
+    out.push({ kind: 'build', ri, terrain: rd.terrain, blds: rd.buildings, core: prevCore });
+    out.push({ kind: 'attack', ri, terrain: rd.terrain, blds: rd.buildings, core: prevCore });
+    rd.frames.forEach((f, fi) => out.push({ kind: 'clash', ri, fi, terrain: rd.terrain, blds: rd.buildings, core: prevCore }));
+    // The replay stores terrain after shaping; the scars the clash left are applied here for the resolve step and the next round.
+    const scarred = rd.terrain.slice();
+    for (const [t, k] of (rd.scars || [])) scarred[t] = SCAR_TERRAIN[k];
+    out.push({ kind: 'resolve', ri, terrain: scarred, blds: rd.buildings, core: rd.core });
+    prevT = scarred;
+    prevB = rd.buildings.filter((b) => {
+      const lastF = rd.frames[rd.frames.length - 1];
+      const hp = lastF ? (lastF.b.find((x) => x[0] === b[0]) || [0, b[4]])[1] : b[4];
+      return hp > 0;
+    });
+    prevCore = rd.core;
+  });
+  return out;
+}
+
+function sizeCanvas() {
+  const w = canvas.parentElement.clientWidth;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(w * H / W * dpr);
+  canvas.style.height = (w * H / W) + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function cellSize() { return canvas.clientWidth / W; }
+function center(t) {
+  const c = cellSize();
+  const x = t % W, y = Math.floor(t / W);
+  return [x * c + c / 2, (H - 1 - y) * c + c / 2];
+}
+
+function drawTerrain(terrain) {
+  const c = cellSize();
+  const cols = TERR.map((n) => css('--t-' + n));
+  for (let t = 0; t < N; t++) {
+    const x = t % W, y = Math.floor(t / W);
+    const px = x * c, py = (H - 1 - y) * c;
+    ctx.fillStyle = cols[terrain[t]];
+    ctx.fillRect(px, py, c, c);
+    ctx.strokeStyle = css('--grid');
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, c - 1, c - 1);
+    const k = TERR[terrain[t]];
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = css('--ink');
+    ctx.strokeStyle = css('--ink');
+    const cx = px + c / 2, cy = py + c / 2, s = c * 0.16;
+    if (k === 'high') { ctx.beginPath(); ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s, cy + s * 0.8); ctx.lineTo(cx - s, cy + s * 0.8); ctx.closePath(); ctx.stroke(); }
+    if (k === 'trench') { ctx.beginPath(); ctx.moveTo(cx - s, cy - s / 3); ctx.lineTo(cx + s, cy - s / 3); ctx.moveTo(cx - s, cy + s / 3); ctx.lineTo(cx + s, cy + s / 3); ctx.stroke(); }
+    if (k === 'wall') { ctx.globalAlpha = 0.25; ctx.fillStyle = '#fff'; ctx.fillRect(cx - s, cy - s, s * 2, s * 2); }
+    if (k === 'water') { ctx.beginPath(); for (let i = -1; i <= 1; i += 2) { ctx.moveTo(cx - s, cy + i * s / 2); ctx.quadraticCurveTo(cx, cy + i * s / 2 - s / 2, cx + s, cy + i * s / 2); } ctx.stroke(); }
+    if (k === 'forest') { ctx.beginPath(); ctx.arc(cx, cy - s / 3, s * 0.7, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(cx - 1, cy, 2, s); }
+    if (k === 'ore') { ctx.beginPath(); ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s, cy); ctx.lineTo(cx, cy + s); ctx.lineTo(cx - s, cy); ctx.closePath(); ctx.fill(); }
+    ctx.restore();
+  }
+  // no-man's land band (rows 7-8)
+  ctx.save();
+  ctx.strokeStyle = css('--muted');
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, (H - 9) * c); ctx.lineTo(W * c, (H - 9) * c);
+  ctx.moveTo(0, (H - 7) * c); ctx.lineTo(W * c, (H - 7) * c);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// An arrow on the midline for each side's crossing column. Crossings are stored in the side's own frame.
+function drawCrossings(crossings) {
+  const c = cellSize();
+  crossings.forEach((col, side) => {
+    const x = (side === 0 ? col : W - 1 - col) * c + c / 2;
+    const y = (H - 8) * c, d = side === 0 ? -1 : 1;
+    ctx.save();
+    ctx.fillStyle = css(side === 0 ? '--side-a' : '--side-b');
+    ctx.beginPath();
+    ctx.moveTo(x, y + d * c * 0.45); ctx.lineTo(x + c * 0.28, y - d * c * 0.05); ctx.lineTo(x - c * 0.28, y - d * c * 0.05);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawScars(scars) {
+  const c = cellSize();
+  for (const [t, k] of scars) {
+    const [x, y] = center(t);
+    ctx.save();
+    ctx.strokeStyle = k === 0 ? css('--bad') : '#8a5a2b';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, c * 0.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawCores(core) {
+  const c = cellSize();
+  rep.cores.forEach((t, side) => {
+    const [x, y] = center(t);
+    ctx.fillStyle = css(side === 0 ? '--side-a' : '--side-b');
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i + Math.PI / 6; ctx.lineTo(x + Math.cos(a) * c * 0.42, y + Math.sin(a) * c * 0.42); }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = `600 ${Math.round(c * 0.32)}px ${css('--font-mono')}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(core[side], x, y + 1);
+  });
+}
+
+function drawBuildings(blds, hpMap) {
+  const c = cellSize();
+  for (const b of blds) {
+    const [id, side, kind, tile, hp0] = b;
+    const hp = hpMap && hpMap.has(id) ? hpMap.get(id) : hp0;
+    if (hp <= 0) continue;
+    const [x, y] = center(tile);
+    const s = c * 0.34;
+    ctx.fillStyle = css('--panel');
+    ctx.strokeStyle = css(side === 0 ? '--side-a' : '--side-b');
+    ctx.lineWidth = 2;
+    ctx.fillRect(x - s, y - s, s * 2, s * 2);
+    ctx.strokeRect(x - s, y - s, s * 2, s * 2);
+    ctx.fillStyle = css('--ink');
+    ctx.font = `600 ${Math.round(c * 0.3)}px ${css('--font-mono')}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(BLD[kind], x, y + 1);
+    const max = [40, 30, 20][kind];
+    ctx.fillStyle = css('--good');
+    ctx.fillRect(x - s, y + s + 2, s * 2 * Math.max(0, hp) / max, 3);
+  }
+}
+
+function jitter(id) {
+  const a = ((id * 2654435761) >>> 0) % 360 * Math.PI / 180;
+  return [Math.cos(a), Math.sin(a)];
+}
+
+function drawUnits(frame, nextFrame, f) {
+  const c = cellSize();
+  const nextPos = new Map();
+  if (nextFrame) for (const u of nextFrame.u) nextPos.set(u[0], u[3]);
+  for (const u of frame.u) {
+    const [id, side, kind, tile, hp] = u;
+    let [x, y] = center(tile);
+    if (nextPos.has(id)) {
+      const [x2, y2] = center(nextPos.get(id));
+      x += (x2 - x) * f; y += (y2 - y) * f;
+    }
+    const [jx, jy] = jitter(id);
+    x += jx * c * 0.18; y += jy * c * 0.18;
+    const r = c * 0.2;
+    ctx.fillStyle = css(side === 0 ? '--side-a' : '--side-b');
+    ctx.strokeStyle = css('--panel');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (AIR[kind]) { ctx.moveTo(x, y - r * 1.2); ctx.lineTo(x + r * 1.1, y + r * 0.8); ctx.lineTo(x - r * 1.1, y + r * 0.8); ctx.closePath(); }
+    else ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = `600 ${Math.round(c * 0.2)}px ${css('--font-mono')}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(UNIT[kind], x, y + (AIR[kind] ? 2 : 1));
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.6;
+  ctx.strokeStyle = css('--bad');
+  ctx.lineWidth = 1;
+  for (const [a, b] of frame.a) {
+    const [x1, y1] = center(a), [x2, y2] = center(b);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawOps(ops) {
+  const c = cellSize();
+  for (const o of ops) {
+    const x = o.tile % W, y = Math.floor(o.tile / W);
+    const px = x * c, py = (H - 1 - y) * c;
+    ctx.save();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = css(o.side === 0 ? '--side-a' : '--side-b');
+    if (o.out === 'reverted') { ctx.setLineDash([4, 3]); ctx.strokeStyle = css('--muted'); }
+    ctx.strokeRect(px + 2.5, py + 2.5, c - 5, c - 5);
+    ctx.restore();
+  }
+}
+
+function sideHud(side, st) {
+  const rd = rep.rounds[st.ri];
+  const roster = rd.roster ? rd.roster[side] : [];
+  const counts = {};
+  roster.forEach((k) => { counts[UNIT_NAME[k]] = (counts[UNIT_NAME[k]] || 0) + 1; });
+  const hp = st.core[side];
+  const color = side === 0 ? 'var(--side-a)' : 'var(--side-b)';
+  const shown = ['attack', 'clash', 'resolve'].includes(st.kind);
+  const lane = shown ? `crossing column ${rd.crossings[side] + 1} of 9` : 'crossing not chosen yet';
+  const units = Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ') || 'no units yet';
+  return `<div class="name"><span class="dot" style="background:${color}"></span>${side === 0 ? 'A' : 'B'} · ${rep.bots[side]}</div>
+    <div class="note">${rep.commanders ? rep.commanders[side] : ''} · ${lane}</div>
+    <div class="hpbar"><span style="width:${hp / 20 * 100}%;background:${color}"></span></div>
+    <div class="num">Core ${hp}/20 · ore ${rd.ore ? rd.ore[side] : '–'}</div>
+    <div class="note">${units}</div>`;
+}
+
+function describe(st) {
+  const rd = rep.rounds[st.ri];
+  const who = (s) => s === 0 ? `<span class="chip a">A</span>` : `<span class="chip b">B</span>`;
+  if (st.kind === 'draft') {
+    const offers = rd.offers.map((o, i) => `<span class="chip">${i + 1}. ${o}</span>`).join(' ');
+    const picks = rd.picks ? `A takes <b>${rd.offers[rd.picks[0]]}</b>, B takes <b>${rd.offers[rd.picks[1]]}</b>.` : '';
+    return `<div>Offers: ${offers}</div><div>${picks} Each player ranks the three cards. If both want the same card first, the player behind on core HP gets it and the other takes their second choice; if HP is level, both take their second choice.</div>`;
+  }
+  if (st.kind === 'terraform') {
+    if (!rd.ops.length) return '<div>Neither side shaped its base this round.</div>';
+    const lines = rd.ops.map((o) => {
+      const tag = o.out === 'reverted' ? '<span class="chip">reverted: would cut the last path</span>' : '<span class="chip good">applied</span>';
+      return `<div>${who(o.side)} <b>${o.op}</b> on column ${o.tile % W + 1}, row ${Math.floor(o.tile / W) + 1} ${tag}</div>`;
+    });
+    return lines.join('') + '<div class="note">Shaping and building are chosen in secret, then both bases are revealed.</div>';
+  }
+  if (st.kind === 'build') {
+    const mine = (s) => rd.buildings.filter((b) => b[1] === s).map((b) => BLD_NAME[b[2]]);
+    const txt = (s) => {
+      const b = mine(s);
+      return `${b.length ? b.join(', ') : 'no buildings'}; army of ${rd.roster[s].length}`;
+    };
+    return `<div>${who(0)} ${txt(0)}</div><div>${who(1)} ${txt(1)}</div><div class="note">Both bases are now public. The units bought this round stay hidden until the clash.</div>`;
+  }
+  if (st.kind === 'attack') {
+    return `<div>${who(0)} crosses on column ${rd.crossings[0] + 1}; ${who(1)} on column ${rd.crossings[1] + 1} (counted from each player's own left).</div><div class="note">Each player chose after seeing the other's base, but not the other's crossing.</div>`;
+  }
+  if (st.kind === 'clash') {
+    const f = rd.frames[st.fi];
+    const a = f.u.filter((u) => u[1] === 0).length, b = f.u.filter((u) => u[1] === 1).length;
+    return `<div>Clash, ${(f.t / 10).toFixed(1)} s: ${a} A units and ${b} B units on the field. Units cross the midline at their crossing, fight anything within 3 tiles, and breach the enemy core on contact.</div>`;
+  }
+  const dmgA = rd.breach[0], dmgB = rd.breach[1];
+  const scars = (rd.scars || []).map(([t, k]) => `${k === 0 ? 'a crater' : 'a ruin'} on column ${t % W + 1}, row ${Math.floor(t / W) + 1}`);
+  return `<div>${who(0)} breached with ${dmgA} tier${dmgA === 1 ? '' : 's'}; ${who(1)} with ${dmgB}. Each tier deals ${rd.round + 1} core damage this round (round number + 1).</div><div class="num">Cores: A ${rd.core[0]}, B ${rd.core[1]}</div><div>${scars.length ? 'The fight left ' + scars.join(', ') + '.' : 'The fight left no scars.'}</div>${st.ri === rep.rounds.length - 1 ? `<div><b>Winner: ${rep.winner === 0 ? 'A' : 'B'} (${rep.bots[rep.winner]})</b></div>` : ''}`;
+}
+
+function render(f = 0) {
+  const st = steps[idx];
+  if (!st) return;
+  const rd = rep.rounds[st.ri];
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  drawTerrain(st.terrain);
+  let hpMap = null;
+  if (st.kind === 'clash') hpMap = new Map(rd.frames[st.fi].b.map((x) => [x[0], x[1]]));
+  if (st.kind === 'resolve') { const lf = rd.frames[rd.frames.length - 1]; hpMap = new Map(lf.b.map((x) => [x[0], x[1]])); }
+  drawBuildings(st.blds, hpMap);
+  drawCores(st.core);
+  if (st.kind === 'terraform') drawOps(rd.ops);
+  if (['attack', 'clash', 'resolve'].includes(st.kind)) drawCrossings(rd.crossings);
+  if (st.kind === 'resolve') drawScars(rd.scars || []);
+  if (st.kind === 'clash') {
+    const fr = rd.frames[st.fi], nx = rd.frames[st.fi + 1];
+    drawUnits(fr, nx, f);
+  }
+  const label = { draft: 'Draft', terraform: 'Shape', build: 'Build and reveal', attack: 'Attack plan', clash: 'Clash', resolve: 'Resolve and scars' }[st.kind];
+  $('phase').textContent = `Round ${rd.round} · ${label}`;
+  $('rules').textContent = `Rules v${DATA.report.version}`;
+  $('hud-a').innerHTML = sideHud(0, st);
+  $('hud-b').innerHTML = sideHud(1, st);
+  $('log').innerHTML = describe(st);
+  $('scrub').value = idx;
+}
+
+function loadGame(key) {
+  rep = DATA.replays[key];
+  steps = buildSteps(rep);
+  idx = 0; acc = 0;
+  $('scrub').max = steps.length - 1;
+  render();
+}
+
+function tick(ts) {
+  if (!last) last = ts;
+  const dt = ts - last; last = ts;
+  if (playing) {
+    acc += dt * speed;
+    const d = DUR[steps[idx].kind];
+    while (acc >= DUR[steps[idx].kind]) {
+      acc -= DUR[steps[idx].kind];
+      if (idx < steps.length - 1) idx++;
+      else { playing = false; $('play').textContent = 'Play'; acc = 0; break; }
+    }
+    render(steps[idx].kind === 'clash' ? Math.min(1, acc / DUR.clash) : 0);
+  }
+  requestAnimationFrame(tick);
+}
+
+function setPlaying(p) { playing = p; $('play').textContent = p ? 'Pause' : 'Play'; }
+
+$('play').onclick = () => { if (idx >= steps.length - 1) idx = 0; setPlaying(!playing); };
+$('prev').onclick = () => { setPlaying(false); idx = Math.max(0, idx - 1); acc = 0; render(); };
+$('next').onclick = () => { setPlaying(false); idx = Math.min(steps.length - 1, idx + 1); acc = 0; render(); };
+$('nextround').onclick = () => {
+  const r = steps[idx].ri;
+  const j = steps.findIndex((s) => s.ri === r + 1);
+  idx = j >= 0 ? j : steps.length - 1; acc = 0; render();
+};
+$('speed').onclick = () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; $('speed').textContent = speed + '×'; };
+$('scrub').oninput = (e) => { setPlaying(false); idx = +e.target.value; acc = 0; render(); };
+$('game').onchange = (e) => { setPlaying(false); loadGame(e.target.value); };
+
+function showTab(which) {
+  const rep = which === 'replay';
+  $('tab-replay').setAttribute('aria-selected', rep);
+  $('tab-results').setAttribute('aria-selected', !rep);
+  $('view-replay').hidden = !rep;
+  $('view-results').hidden = rep;
+  if (rep) { sizeCanvas(); render(); }
+}
+$('tab-replay').onclick = () => showTab('replay');
+$('tab-results').onclick = () => showTab('results');
+
+function legend() {
+  const items = TERR.map((t) => `<div><span class="sw" style="background:var(--t-${t})"></span>${t}</div>`);
+  items.push('<div>G grunt · R rhino</div><div>A archer · N ranger</div><div>D drone · S gunship (air)</div><div>T turret · F flak · E extractor</div>');
+  $('legend').innerHTML = items.join('');
+}
+
+// The results page renders what `mt_sim suite` wrote to report.json. The simulator owns every label, bar and verdict,
+// so a new criterion or check needs no change here.
+function results() {
+  const R = DATA.report, sp = R.selfplay.search;
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const code = (t) => esc(t).replace(/`([^`]*)`/g, '<code>$1</code>');
+  const pct = (x) => (x * 100).toFixed(1) + '%';
+  const verdict = (cls, text) => `<span class="verdict ${cls}">${text}</span>`;
+  const STATUS = { pass: verdict('go', 'PASS'), fail: verdict('nogo', 'FAIL'), pending: verdict('', 'PENDING'), reported: verdict('', 'REPORTED') };
+  const scored = R.criteria.filter((c) => c.status === 'pass' || c.status === 'fail');
+  $('results-note').textContent = `Rules v${R.version}. ${scored.filter((c) => c.status === 'pass').length} of ${scored.length} scored criteria pass; ` +
+    `${R.checks.filter((c) => c.ok).length} of ${R.checks.length} match checks pass. ${R.games} games per matchup, seat-swapped. ` +
+    `Pending means the simulator cannot measure the criterion yet; reported means it has no bar.`;
+  $('criteria').innerHTML = '<tr><th>#</th><th>Claim</th><th>Measured as</th><th>Result</th><th>Target</th><th>Verdict</th></tr>' + R.criteria.map((c) =>
+    `<tr><td>${c.id}</td><td>${esc(c.claim)}</td><td>${code(c.measure)}${c.note ? `<div class="note">${code(c.note)}</div>` : ''}</td><td class="num">${esc(c.value)}</td><td class="num">${esc(c.target)}</td><td>${STATUS[c.status]}</td></tr>`).join('');
+  $('checks').innerHTML = '<tr><th>Check</th><th>Result</th><th>Bar</th><th>Verdict</th></tr>' + R.checks.map((c) =>
+    `<tr><td>${code(c.name)}</td><td class="num">${esc(c.value)}</td><td class="num">${esc(c.bar)}</td><td>${c.ok ? STATUS.pass : STATUS.fail}</td></tr>`).join('');
+  $('feel').innerHTML = '<tr><th>Metric</th><th>Result</th><th>Bar</th><th>Verdict</th></tr>' + R.feel.map((f) =>
+    `<tr><td>${esc(f.name)}</td><td class="num">${esc(f.show)}</td><td class="num">${esc(f.bar)}</td><td>${f.fails ? STATUS.fail : STATUS.pass}</td></tr>`).join('');
+  $('h2h').innerHTML = '<tr><th>Matchup</th><th>Win rate</th><th style="width:45%"></th></tr>' + Object.values(R.head_to_head).map((m) =>
+    `<tr><td>${m.a} vs ${m.b}</td><td class="num">${pct(m.winrate)} ±${(m.ci * 100).toFixed(1)}</td><td><div class="bar"><span style="width:${m.winrate * 100}%"></span><i style="left:50%"></i><i style="left:60%"></i></div></td></tr>`).join('');
+  $('opmix').innerHTML = '<tr><th>Op</th><th>TP share</th><th style="width:45%"></th></tr>' + OPS_ORDER.map((o, i) =>
+    `<tr><td>${o}</td><td class="num">${pct(sp.tp_share[i])}</td><td><div class="bar"><span style="width:${sp.tp_share[i] * 100}%"></span><i style="left:50%"></i></div></td></tr>`).join('');
+}
+
+const sel = $('game');
+const LABELS = { search_vs_search: 'Search vs search', shaper_vs_search: 'Shaper vs search', air_vs_ground: 'Air persona vs ground persona', rush_vs_fort: 'Rush vs the fort defender', search_vs_greedy: 'Search vs greedy' };
+Object.keys(DATA.replays).forEach((k) => { const o = document.createElement('option'); o.value = k; o.textContent = LABELS[k] || k; sel.appendChild(o); });
+legend();
+results();
+sizeCanvas();
+loadGame(sel.value);
+window.addEventListener('resize', () => { sizeCanvas(); render(); });
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

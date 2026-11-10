@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["mt_core", "mt_bots", "mt_sim", "mt_game"]
+# The playable demo pulls in Bevy; keep it out of `cargo build`, `cargo test` and `make check`.
+default-members = ["mt_core", "mt_bots", "mt_sim"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[profile.release.package.mt_core]
+overflow-checks = true
+
+# Release plus debug info, so a profiler can name functions and lines. Builds into target/profiling.
+[profile.profiling]
+inherits = "release"
+debug = true
+
+[profile.profiling.package.mt_core]
+overflow-checks = true
+
+# For the playable demo (`make demo`): release speed without fat LTO, which takes many minutes with Bevy.
+[profile.demo]
+inherits = "release"
+lto = "off"
+codegen-units = 16
+
+[profile.demo.package.mt_core]
+overflow-checks = true
